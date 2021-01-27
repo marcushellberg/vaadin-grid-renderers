@@ -22,15 +22,28 @@ import Person from "../../generated/com/example/application/data/entity/Person";
 import * as personEndpoint from "../../generated/PersonEndpoint";
 // @ts-ignore
 import styles from "./people-view.css";
+import { GridColumnElement } from "@vaadin/vaadin-grid/src/vaadin-grid-column";
+import { GridElement, GridItemModel } from "@vaadin/vaadin-grid";
+import { render } from "lit-html";
 
 @customElement("people-view")
 export class PeopleView extends LitElement {
   @internalProperty()
   private people: Person[] = [];
 
+  @internalProperty()
+  private selectedItems: Person[] = [];
+
   render() {
     return html`
-      <vaadin-grid id="grid" .items=${this.people}>
+      <vaadin-grid
+        id="grid"
+        .items=${this.people}
+        .rowDetailsRenderer=${this.rowDetailsRenderer}
+        .selectedItems=${this.selectedItems}
+        .detailsOpenedItems=${this.selectedItems}
+        @active-item-changed=${this.toggleDetails}
+      >
         <vaadin-grid-sort-column
           auto-width
           path="firstName"
@@ -42,6 +55,7 @@ export class PeopleView extends LitElement {
         <vaadin-grid-sort-column
           auto-width
           path="email"
+          .renderer=${this.emailRenderer}
         ></vaadin-grid-sort-column>
         <vaadin-grid-sort-column
           auto-width
@@ -62,6 +76,26 @@ export class PeopleView extends LitElement {
   async connectedCallback() {
     super.connectedCallback();
     this.people = await personEndpoint.findAll();
+  }
+
+  emailRenderer(root: HTMLElement, _: GridColumnElement, model: GridItemModel) {
+    const person = model.item as Person;
+
+    render(html` <a href="mailto:${person.email}">${person.email}</a> `, root);
+  }
+
+  rowDetailsRenderer(root: HTMLElement, _: GridElement, model: GridItemModel) {
+    const person = model.item as Person;
+
+    render(
+      html` <b>Details for ${person.firstName} ${person.lastName}</b> `,
+      root
+    );
+  }
+
+  toggleDetails(e: CustomEvent) {
+    const person = e.detail.value as Person;
+    this.selectedItems = person ? [person] : [];
   }
 
   static styles = css`
